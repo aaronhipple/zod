@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
 import * as z from "../../index.js";
-import { ZodCompileAsyncError, ZodCompileUnsupportedError, compile } from "../compile.js";
+import { ZodCompileAsyncError, ZodCompileUnsupportedError, compile, compileFn } from "../compile.js";
 import { $ZodAsyncError } from "../core.js";
 
 // Differential helper: assert compiled schema matches the original on a value.
@@ -1349,6 +1349,20 @@ test("runtime island inside array element", () => {
   const aot = compile(z.array(z.xor([z.string(), z.number()])));
   expect(valid(aot, ["a", 1, "b"])).toEqual(["a", 1, "b"]);
   invalid(aot, ["a", true]);
+});
+
+test("runtime island does not leak indentation into the rest of the generated code", () => {
+  const schema = z.object({ a: z.coerce.number().nullable() });
+  expect(compileFn(schema, { debug: true }).code).toMatchInlineSnapshot(`
+    "// Constants: INVALID, c0, c1
+    if (typeof input !== "object" || input === null || Array.isArray(input)) return INVALID;
+    const v0 = input["a"];
+    if (!("a" in input)) return INVALID;
+    const v1 = c1(c0, v0);
+    if (v1 === INVALID) return INVALID;
+    const v2 = { "a": v1 };
+    return v2;"
+  `);
 });
 
 test("url string-format check never assigns to its accessor", () => {

@@ -14,8 +14,11 @@ export class Doc {
 
   indented(fn: (doc: Doc) => void) {
     this.indent += 1;
-    fn(this);
-    this.indent -= 1;
+    try {
+      fn(this);
+    } finally {
+      this.indent -= 1;
+    }
   }
 
   write(fn: ModeWriter): void;
